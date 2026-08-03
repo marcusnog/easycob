@@ -4,12 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Ambiente para deploy manual"
-        type: choice
-        options: [homol, production]
-        default: homol
 
 env:
   AWS_REGION: sa-east-1
@@ -65,33 +59,4 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.HOMOL_WHATSAPP_VERIFY_TOKEN }}
           WHATSAPP_APP_SECRET: ${{ secrets.HOMOL_WHATSAPP_APP_SECRET }}
           WHATSAPP_ACCESS_TOKEN: ${{ secrets.HOMOL_WHATSAPP_ACCESS_TOKEN }}
-        run: ./deploy/homol-deploy.sh
-
-  # Produção: gate manual (environment "production" + aprovação) e rollback = redeploy do SHA anterior.
-  # Dormant até existir infra/host de produção (secrets PROD_*).
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: build
-    environment: production
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ env.AWS_REGION }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: Deploy produção
-        env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          IMAGE_TAG: ${{ github.sha }}
-          DEPLOY_BUCKET: ${{ secrets.PROD_DEPLOY_BUCKET }}
-          AUTH_AUTHORITY: ${{ secrets.PROD_AUTH_AUTHORITY }}
-          AUTH_AUDIENCE: ${{ secrets.PROD_AUTH_AUDIENCE }}
-          COGNITO_DOMAIN: ${{ secrets.PROD_COGNITO_DOMAIN }}
-          COGNITO_CLIENT_ID: ${{ secrets.PROD_COGNITO_CLIENT_ID }}
-          QUEUE_URL: ${{ secrets.PROD_QUEUE_URL }}
-          WHATSAPP_VERIFY_TOKEN: ${{ secrets.PROD_WHATSAPP_VERIFY_TOKEN }}
-          WHATSAPP_APP_SECRET: ${{ secrets.PROD_WHATSAPP_APP_SECRET }}
-          WHATSAPP_ACCESS_TOKEN: ${{ secrets.PROD_WHATSAPP_ACCESS_TOKEN }}
         run: ./deploy/homol-deploy.sh

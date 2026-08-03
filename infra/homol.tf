@@ -6,6 +6,10 @@ locals {
   is_homol = var.environment == "homol"
   name     = "${var.project}-${var.environment}"
   apps     = ["api", "web", "worker"]
+  off_hours = {
+    stop  = "cron(0 2 * * ? *)"
+    start = "cron(0 10 * * ? *)"
+  }
 }
 
 data "aws_caller_identity" "current" {}
@@ -255,50 +259,27 @@ resource "aws_lambda_function" "homol_shutdown" {
   }
 }
 
-resource "aws_cloudwatch_event_rule" "homol_stop" {
-  count               = local.is_homol ? 1 : 0
-  name                = "${local.name}-stop-off-hours"
-  schedule_expression = "cron(0 2 * * ? *)"
+resource "aws_cloudwatch_event_rule" "homol_off_hours" {
+  for_each            = local.is_homol ? local.off_hours : {}
+  name                = "${local.name}-${each.key}-off-hours"
+  schedule_expression = each.value
 }
 
-resource "aws_cloudwatch_event_target" "homol_stop" {
-  count     = local.is_homol ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.homol_stop[0].name
-  target_id = "stop"
+resource "aws_cloudwatch_event_target" "homol_off_hours" {
+  for_each  = local.is_homol ? local.off_hours : {}
+  rule      = aws_cloudwatch_event_rule.homol_off_hours[each.key].name
+  target_id = each.key
   arn       = aws_lambda_function.homol_shutdown[0].arn
-  input     = jsonencode({ action = "stop" })
+  input     = jsonencode({ action = each.key })
 }
 
-resource "aws_cloudwatch_event_rule" "homol_start" {
-  count               = local.is_homol ? 1 : 0
-  name                = "${local.name}-start-off-hours"
-  schedule_expression = "cron(0 10 * * ? *)"
-}
-
-resource "aws_cloudwatch_event_target" "homol_start" {
-  count     = local.is_homol ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.homol_start[0].name
-  target_id = "start"
-  arn       = aws_lambda_function.homol_shutdown[0].arn
-  input     = jsonencode({ action = "start" })
-}
-
-resource "aws_lambda_permission" "homol_shutdown_stop" {
-  count         = local.is_homol ? 1 : 0
-  statement_id  = "AllowEventBridgeStop"
+resource "aws_lambda_permission" "homol_shutdown_off_hours" {
+  for_each      = local.is_homol ? local.off_hours : {}
+  statement_id  = "AllowEventBridge${title(each.key)}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.homol_shutdown[0].function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.homol_stop[0].arn
-}
-
-resource "aws_lambda_permission" "homol_shutdown_start" {
-  count         = local.is_homol ? 1 : 0
-  statement_id  = "AllowEventBridgeStart"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.homol_shutdown[0].function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.homol_start[0].arn
+  source_arn    = aws_cloudwatch_event_rule.homol_off_hours[each.key].arn
 }
 
 # --- Outputs para a homologação ---

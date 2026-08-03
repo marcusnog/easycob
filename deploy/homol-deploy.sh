@@ -43,7 +43,7 @@ aws s3 cp "s3://${DEPLOY_BUCKET}/deploy/.env" /opt/easycob/.env >/dev/null
 cd /opt/easycob
 aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}" >/dev/null
 IMAGE_TAG="${IMAGE_TAG}" ECR_REGISTRY="${ECR_REGISTRY}" \
-  docker compose --profile worker -f compose.yaml up -d --pull always
+  docker compose -f compose.yaml up -d --pull always
 COMMANDS
 )
 B64=$(printf '%s' "$COMMANDS" | base64 -w0)
