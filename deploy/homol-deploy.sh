@@ -48,14 +48,27 @@ COMMANDS
 )
 B64=$(printf '%s' "$COMMANDS" | base64 -w0)
 
-aws ssm send-command \
+COMMAND_ID=$(aws ssm send-command \
   --region "$AWS_REGION" \
   --instance-ids "$INSTANCE_ID" \
   --document-name "AWS-RunShellScript" \
   --comment "easycob homol deploy ${IMAGE_TAG}" \
   --timeout-seconds 900 \
   --parameters "commands=[\"echo ${B64} | base64 -d | bash\"]" \
-  --wait-for-success \
-  --output text --query "Command.CommandId" >/dev/null
+  --query "Command.CommandId" --output text)
+
+STATUS="Pending"
+for _ in $(seq 1 90); do
+  STATUS=$(aws ssm get-command-invocation \
+    --region "$AWS_REGION" --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+    --query "Status" --output text)
+  case "$STATUS" in
+    Success) break ;;
+    Failed|Cancelled|TimedOut|Undeliverable)
+      echo "Run command falhou (${STATUS})." >&2; exit 1 ;;
+  esac
+  sleep 10
+done
+[[ "$STATUS" != "Success" ]] && { echo "Run command expirou aguardando (${STATUS})." >&2; exit 1; }
 
 echo "Deploy homol ${IMAGE_TAG} concluído em ${INSTANCE_ID}."
