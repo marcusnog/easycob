@@ -57,6 +57,15 @@ docker exec easycob-postgres-1 psql -U postgres -d easycob -c \
 
 Crie o usuário Cognito com o mesmo `TENANT_ID` em `custom:tenant_id` e associe o grupo (mesmos comandos de `docs/cognito.md`, com o `USER_POOL_ID` de homol).
 
+### Seed aplicado (estado atual)
+
+| Tenant | `id` | Usuário | Cognito |
+|---|---|---|---|
+| EasyCob Homolog | `3f213193-75d9-48e8-8bfa-491ba5efc597` | `marcusnogueira2105@gmail.com` | grupo `Owner`, `custom:tenant_id` = id acima |
+| Inova Digital | `e82b5115-0606-4094-9009-be1d38a53562` | `vanilsonjr@gmail.com` | grupo `Owner`, `custom:tenant_id` = id acima, `FORCE_CHANGE_PASSWORD` (invite por email) |
+
+> Contexto de negócio: o Inova Digital é a empresa que quer operar a própria base de clientes e carteira de clientes — requisito de produto para futuras telas/módulos de cliente e carteira.
+
 ## 4. Secrets no GitHub (repo `marcusnog/easycob`)
 
 | Secret | Valor |
