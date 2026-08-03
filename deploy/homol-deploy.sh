@@ -4,7 +4,7 @@
 set -euo pipefail
 
 : "${AWS_REGION:?}" "${ECR_REGISTRY:?}" "${IMAGE_TAG:?}" "${DEPLOY_BUCKET:?}"
-: "${AUTH_AUTHORITY:?}" "${AUTH_AUDIENCE:?}" "${COGNITO_DOMAIN:?}" "${COGNITO_CLIENT_ID:?}"
+: "${AUTH_AUTHORITY:?}" "${AUTH_AUDIENCE:?}" "${COGNITO_DOMAIN:?}" "${COGNITO_CLIENT_ID:?}" "${WEB_ORIGIN:?}"
 : "${QUEUE_URL:?}" "${WHATSAPP_ACCESS_TOKEN:?}"
 
 # 1. Gera o .env do ambiente a partir dos segredos injetados pelo workflow.
@@ -13,6 +13,7 @@ Authentication__Authority=${AUTH_AUTHORITY}
 Authentication__Audience=${AUTH_AUDIENCE}
 COGNITO_DOMAIN=${COGNITO_DOMAIN}
 COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+WEB_ORIGIN=${WEB_ORIGIN}
 AWS__Region=${AWS_REGION}
 AWS__QueueUrl=${QUEUE_URL}
 WhatsApp__VerifyToken=${WHATSAPP_VERIFY_TOKEN:-change-me}

@@ -12,6 +12,8 @@ export function createAuthorizationRequest(origin: string) {
 }
 
 export function originOf(request: Request) {
+  const configured = process.env.WEB_ORIGIN?.replace(/\/$/, "");
+  if (configured) return configured;
   const proto = request.headers.get("x-forwarded-proto") ?? "http";
   return `${proto}://${request.headers.get("host")}`;
 }

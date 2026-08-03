@@ -49,6 +49,7 @@ services:
     environment:
       NODE_ENV: production
       API_URL: http://api:8080
+      WEB_ORIGIN: ${WEB_ORIGIN}
       COGNITO_DOMAIN: ${COGNITO_DOMAIN}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID}
     ports:

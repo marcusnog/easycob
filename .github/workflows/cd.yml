@@ -55,6 +55,7 @@ jobs:
           AUTH_AUDIENCE: ${{ secrets.HOMOL_AUTH_AUDIENCE }}
           COGNITO_DOMAIN: ${{ secrets.HOMOL_COGNITO_DOMAIN }}
           COGNITO_CLIENT_ID: ${{ secrets.HOMOL_COGNITO_CLIENT_ID }}
+          WEB_ORIGIN: ${{ secrets.HOMOL_WEB_ORIGIN }}
           QUEUE_URL: ${{ secrets.HOMOL_QUEUE_URL }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.HOMOL_WHATSAPP_VERIFY_TOKEN }}
           WHATSAPP_APP_SECRET: ${{ secrets.HOMOL_WHATSAPP_APP_SECRET }}
