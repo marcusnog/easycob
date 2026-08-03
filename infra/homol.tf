@@ -99,7 +99,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 resource "aws_security_group" "homol" {
   count       = local.is_homol ? 1 : 0
   name        = "${local.name}-sg"
-  description = "Acesso à instância de homologação"
+  description = "Homologacao instance access"
   ingress {
     description = "SSH administrativo"
     from_port   = 22
@@ -150,10 +150,10 @@ resource "aws_cloudfront_distribution" "homol_web" {
   http_version = "http2"
 
   origin {
-    domain_name = aws_eip.homol[0].public_ip
+    domain_name = aws_eip.homol[0].public_dns
     origin_id   = "web"
     custom_origin_config {
-      http_port              = 80
+      http_port              = 3001
       https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
