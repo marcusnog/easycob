@@ -1,0 +1,74 @@
+# Compose da homologação (EC2): imagens imutáveis do ECR por SHA.
+# Variáveis interpoladas: ECR_REGISTRY e IMAGE_TAG (passadas no deploy);
+# demais valores vêm do .env no mesmo diretório.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: easycob
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d easycob"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    image: ${ECR_REGISTRY}/easycob-homol-api:${IMAGE_TAG}
+    entrypoint: ["/app/migrate"]
+    command: ["--connection", "Host=postgres;Port=5432;Database=easycob;Username=postgres;Password=postgres"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: ${ECR_REGISTRY}/easycob-homol-api:${IMAGE_TAG}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=easycob;Username=easycob_api;Password=easycob-api-local
+      Authentication__Authority: ${Authentication__Authority}
+      Authentication__Audience: ${Authentication__Audience}
+      WhatsApp__VerifyToken: ${WhatsApp__VerifyToken}
+      WhatsApp__AppSecret: ${WhatsApp__AppSecret}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    image: ${ECR_REGISTRY}/easycob-homol-web:${IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:8080
+      COGNITO_DOMAIN: ${COGNITO_DOMAIN}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  worker:
+    image: ${ECR_REGISTRY}/easycob-homol-worker:${IMAGE_TAG}
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=easycob;Username=easycob_worker;Password=easycob-worker-local
+      AWS__Region: ${AWS__Region}
+      AWS__QueueUrl: ${AWS__QueueUrl}
+      WhatsApp__AccessToken: ${WhatsApp__AccessToken}
+      WhatsApp__GraphVersion: ${WhatsApp__GraphVersion}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

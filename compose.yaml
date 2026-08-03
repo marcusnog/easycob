@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: easycob
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d easycob"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=easycob;Username=easycob_api;Password=easycob-api-local
+      Authentication__Authority: ${Authentication__Authority:-https://cognito-idp.sa-east-1.amazonaws.com/CHANGE_ME}
+      Authentication__Audience: ${Authentication__Audience:-CHANGE_ME}
+      WhatsApp__VerifyToken: ${WhatsApp__VerifyToken:-CHANGE_ME}
+      WhatsApp__AppSecret: ${WhatsApp__AppSecret:-CHANGE_ME}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    entrypoint: ["/app/migrate"]
+    command: ["--connection", "Host=postgres;Port=5432;Database=easycob;Username=postgres;Password=postgres"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_URL: http://api:8080
+      COGNITO_DOMAIN: ${COGNITO_DOMAIN:-https://example.auth.sa-east-1.amazoncognito.com}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-CHANGE_ME}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+
+  worker:
+    profiles: ["worker"]
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=easycob;Username=easycob_worker;Password=easycob-worker-local
+      AWS__Region: ${AWS__Region:-sa-east-1}
+      AWS__QueueUrl: ${AWS__QueueUrl:-CHANGE_ME}
+      WhatsApp__AccessToken: ${WhatsApp__AccessToken:-CHANGE_ME}
+      WhatsApp__GraphVersion: ${WhatsApp__GraphVersion:-v23.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

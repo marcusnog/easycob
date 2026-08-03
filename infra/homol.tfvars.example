@@ -1,0 +1,14 @@
+# Cópia de infra/homol.tfvars.example para infra/homol.tfvars (gitignored) e ajuste os valores.
+# Ciclo: 1º apply com callback localhost -> anote o output homol_web_url -> 2º apply com o domínio.
+account_suffix        = "SEU_SUFIXO_GLOBAL_UNICO_HOMOL"
+cognito_domain_prefix = "easycob-homol-SEU_SUFIXO_GLOBAL_UNICO_HOMOL"
+
+# Após o 1º apply, preencha com o output homol_web_url (ex.: https://dxxxxxxxxxxxx.cloudfront.net).
+cognito_callback_urls = ["http://localhost:3001/api/auth/callback"]
+cognito_logout_urls   = ["http://localhost:3001/login"]
+
+budget_notify_email = "voce@exemplo.com"
+
+# Restrinja o SSH administrativo ao seu IP, se possível.
+# ssh_cidr_allowlist = ["SEU_IP/32"]
+# homol_instance_type = "t3.medium"
