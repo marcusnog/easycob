@@ -71,6 +71,11 @@ Crie o usuário Cognito com o mesmo `TENANT_ID` em `custom:tenant_id` e associe 
 | `HOMOL_QUEUE_URL` | output `queue_url` |
 | `HOMOL_WHATSAPP_VERIFY_TOKEN` / `_APP_SECRET` / `_ACCESS_TOKEN` | credenciais da Meta WhatsApp Cloud API |
 
+> **WhatsApp sem credenciais**: enquanto os secrets `HOMOL_WHATSAPP_*` não forem reais,
+> use um placeholder que **não** contenha `CHANGE_ME` (ex.: `homol-whatsapp-nao-configurado`),
+> senão o fail-fast do app (Production) derruba api/worker. O ambiente sobe com a
+> mensageria desativada; ao ter as credenciais reais, troque os secrets e re-disparar o CD.
+
 Proteja `main` (Settings → Branches): exigir PR + status checks `api`/`web` do CI.
 
 ## 5. Deploy
