@@ -2,7 +2,7 @@
 set -euo pipefail
 exec >/var/log/easycob-bootstrap.log 2>&1
 
-dnf install -y docker curl git >/dev/null
+dnf install -y docker git >/dev/null
 systemctl enable --now docker
 
 mkdir -p /usr/local/lib/docker/cli-plugins
