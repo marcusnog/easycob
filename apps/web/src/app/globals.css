@@ -251,6 +251,7 @@ th { color: var(--faint); font-size: 0.72rem; font-weight: 700; text-transform: 
 tbody tr { transition: background 140ms ease; }
 tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
 tbody tr:last-child td { border-bottom: 0; }
+.pagination { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
 
 /* ===== Pills & empty state ===== */
 .pill { display: inline-flex; align-items: center; gap: 0.4rem; border-radius: var(--r-pill); padding: 0.28rem 0.65rem; font-size: 0.76rem; font-weight: 700; background: rgba(148, 163, 184, 0.12); color: var(--muted); }

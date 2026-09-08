@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import NavLinks from "./nav-links";
+import { api } from "@/lib/api";
 
 function LogoMark() {
   return (
@@ -17,6 +18,8 @@ function LogoMark() {
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await cookies();
   if (!session.has("access_token")) redirect(session.has("refresh_token") ? "/api/auth/refresh" : "/login");
+  let role = 4;
+  try { role = (await api<{ role: number }>("/tenant/me")).role; } catch { /* Mantém somente a navegação comum. */ }
 
   return (
     <div className="shell">
@@ -26,7 +29,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <span>EasyCob</span>
         </Link>
         <nav className="side-nav" aria-label="Navegação principal">
-          <NavLinks />
+          <NavLinks role={role} />
         </nav>
         <div className="sidebar-foot">
           <a className="btn btn-ghost" href="/api/auth/logout">Sair</a>
@@ -40,7 +43,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <a className="btn btn-secondary" href="/api/auth/logout">Sair</a>
       </header>
       <nav className="nav" aria-label="Navegação principal">
-        <NavLinks />
+        <NavLinks role={role} />
       </nav>
       <main className="content">{children}</main>
     </div>

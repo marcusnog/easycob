@@ -171,6 +171,23 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     }
 
     [Fact]
+    public async Task AuditEvents_AdminCanReadAndViewerIsForbidden()
+    {
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        admin.DefaultRequestHeaders.Add("X-Role", "Admin");
+        var events = (await admin.GetFromJsonAsync<AuditResponse[]>("/audit-events"))!;
+
+        Assert.NotEmpty(events);
+        Assert.Equal(events.OrderByDescending(x => x.OccurredAt), events);
+
+        var viewer = factory.CreateClient();
+        viewer.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        viewer.DefaultRequestHeaders.Add("X-Role", "Viewer");
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync("/audit-events")).StatusCode);
+    }
+
+    [Fact]
     public async Task WhatsAppWebhook_InvalidSignature_IsUnauthorized()
     {
         using var content = new StringContent("{}", Encoding.UTF8, "application/json");
@@ -235,6 +252,7 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     private sealed record CustomerResponse(Guid Id, string Name);
     private sealed record CustomerDetailResponse(ContactResponse[] Contacts);
     private sealed record ContactResponse(string? Phone, bool WhatsAppOptIn, DateTimeOffset? ConsentAt, DateTimeOffset? OptOutAt);
+    private sealed record AuditResponse(DateTimeOffset OccurredAt);
     private sealed record ChargeResponse(InstallmentResponse[] Installments);
     private sealed record ChargeStatusResponse(int Status, PaymentResponse[] Payments);
     private sealed record PaymentResponse(decimal Amount, DateTimeOffset PaidAt);
