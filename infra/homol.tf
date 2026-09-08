@@ -119,7 +119,7 @@ resource "aws_security_group" "homol" {
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront[0].id]
   }
   ingress {
-    description = "Web pública direta (easycob.duckdns.org)"
+    description = "Web publica direta duckdns"
     from_port   = 3001
     to_port     = 3001
     protocol    = "tcp"
