@@ -101,6 +101,8 @@ h2 { font-size: 1.05rem; letter-spacing: -0.01em; }
 .btn-secondary:hover, .button.secondary:hover { color: var(--brand-strong); border-color: var(--brand); background: var(--brand-soft); }
 .btn-ghost { background: transparent; color: var(--muted); }
 .btn-ghost:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+.btn-danger { background: var(--danger); color: #270606; }
+.btn-danger:hover { background: var(--danger-ink); }
 button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
 
@@ -137,6 +139,7 @@ input::placeholder { color: var(--faint); }
 .search-form label { flex: 1; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .compact-form { min-width: min(320px, 75vw); }
+.danger-zone { padding-left: 1rem; border-left: 3px solid var(--danger); }
 
 /* ===== Shell / sidebar layout ===== */
 .shell { min-height: 100vh; }

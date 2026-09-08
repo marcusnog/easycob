@@ -5,6 +5,7 @@ import Link from "next/link";
 import ContactForm from "./contact-form";
 import { setConsent } from "./contact-actions";
 import ImportForm from "./import-form";
+import LifecycleForm from "./lifecycle-form";
 
 type Customer = { id: string; name: string; document?: string; createdAt: string };
 type Contact = { id: string; phone?: string; email?: string; whatsAppOptIn: boolean; consentAt?: string; optOutAt?: string };
@@ -46,18 +47,19 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <h2 id="contact-title">Contatos — {selected.name}</h2>
           <Link className="btn btn-secondary" href="/customers">Fechar</Link>
         </div>
-        <div className="grid split">
-          <ContactForm customerId={selected.id} />
+        {currentUser && currentUser.role <= 3 && <LifecycleForm customer={selected} role={currentUser.role} />}
+        <div className="grid split" style={{ marginTop: "1.5rem" }}>
+          {currentUser && currentUser.role <= 3 ? <ContactForm customerId={selected.id} /> : <div />}
           <div>
             <h2>Contatos cadastrados</h2>
             {selected.contacts.length === 0 ? <p className="muted">Nenhum contato cadastrado.</p> : <ul className="settings-list">
               {selected.contacts.map(contact => <li key={contact.id}>
                 <span>{contact.phone || contact.email}</span>
-                <form action={setConsent.bind(null, selected.id, contact.id, !contact.whatsAppOptIn)}>
+                {currentUser && currentUser.role <= 3 && <form action={setConsent.bind(null, selected.id, contact.id, !contact.whatsAppOptIn)}>
                   <button className={`btn ${contact.whatsAppOptIn ? "btn-secondary" : "btn-primary"}`} type="submit">
                     {contact.whatsAppOptIn ? "Revogar WhatsApp" : "Autorizar WhatsApp"}
                   </button>
-                </form>
+                </form>}
               </li>)}
             </ul>}
           </div>
