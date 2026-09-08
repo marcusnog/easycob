@@ -1,7 +1,10 @@
 import { createAuthorizationRequest, originOf } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const limited = rateLimit(request, "login");
+  if (limited) return limited;
   const auth = createAuthorizationRequest(originOf(request));
   const response = NextResponse.redirect(auth.url);
   const secure = originOf(request).startsWith("https://");

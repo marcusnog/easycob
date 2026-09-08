@@ -1,7 +1,10 @@
 import { originOf, refreshTokens } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const limited = rateLimit(request, "refresh", 30);
+  if (limited) return limited;
   const refreshToken = request.cookies.get("refresh_token")?.value;
   const requestedReturn = request.nextUrl.searchParams.get("returnTo") ?? "/dashboard";
   const returnTo = requestedReturn.startsWith("/") && !requestedReturn.startsWith("//") ? requestedReturn : "/dashboard";

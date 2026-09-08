@@ -1,7 +1,10 @@
 import { originOf, required } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const limited = rateLimit(request, "callback");
+  if (limited) return limited;
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const expectedState = request.cookies.get("oauth_state")?.value;
