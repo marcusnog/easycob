@@ -90,7 +90,7 @@ internal static class CustomersEndpoints
             db.Audit(http.User, "contact.created", nameof(Contact), contact.Id);
             await db.SaveChangesAsync(ct);
             return Results.Created($"/customers/{customerId}/contacts/{contact.Id}", new { contact.Id });
-        }).RequireAuthorization(policy => policy.RequireRole("Owner", "Admin", "Collector"));
+        }).RequireAuthorization(policy => policy.RequireRole("Owner", "Admin", "Finance", "Collector"));
 
         group.MapPut("/{customerId:guid}/contacts/{id:guid}/consent", async (Guid customerId, Guid id, ConsentRequest request, HttpContext http, EasyCobDbContext db, CancellationToken ct) =>
         {
@@ -103,7 +103,7 @@ internal static class CustomersEndpoints
             db.Audit(http.User, request.OptIn ? "contact.opted-in" : "contact.opted-out", nameof(Contact), id);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
-        }).RequireAuthorization(policy => policy.RequireRole("Owner", "Admin", "Collector"));
+        }).RequireAuthorization(policy => policy.RequireRole("Owner", "Admin", "Finance", "Collector"));
 
         group.MapPost("/import", async (IFormFile file, HttpContext http, EasyCobDbContext db, CancellationToken ct) =>
         {

@@ -146,6 +146,31 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     }
 
     [Fact]
+    public async Task Contact_FinanceCreatesAndRevokesWhatsAppConsent()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        client.DefaultRequestHeaders.Add("X-Role", "Finance");
+        var customer = await client.PostAsJsonAsync("/customers", new { name = "Contato", document = Guid.NewGuid().ToString("N") });
+        var customerId = (await customer.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+
+        var created = await client.PostAsJsonAsync($"/customers/{customerId}/contacts", new { phone = "(11) 99999-8888", whatsAppOptIn = true });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var contactId = (await created.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+        var optedIn = await client.GetFromJsonAsync<CustomerDetailResponse>($"/customers/{customerId}");
+        var contact = Assert.Single(optedIn!.Contacts);
+        Assert.Equal("11999998888", contact.Phone);
+        Assert.True(contact.WhatsAppOptIn);
+        Assert.NotNull(contact.ConsentAt);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync($"/customers/{customerId}/contacts/{contactId}/consent", new { optIn = false })).StatusCode);
+        var optedOut = await client.GetFromJsonAsync<CustomerDetailResponse>($"/customers/{customerId}");
+        contact = Assert.Single(optedOut!.Contacts);
+        Assert.False(contact.WhatsAppOptIn);
+        Assert.NotNull(contact.OptOutAt);
+    }
+
+    [Fact]
     public async Task WhatsAppWebhook_InvalidSignature_IsUnauthorized()
     {
         using var content = new StringContent("{}", Encoding.UTF8, "application/json");
@@ -208,6 +233,8 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
 
     private sealed record IdResponse(Guid Id);
     private sealed record CustomerResponse(Guid Id, string Name);
+    private sealed record CustomerDetailResponse(ContactResponse[] Contacts);
+    private sealed record ContactResponse(string? Phone, bool WhatsAppOptIn, DateTimeOffset? ConsentAt, DateTimeOffset? OptOutAt);
     private sealed record ChargeResponse(InstallmentResponse[] Installments);
     private sealed record ChargeStatusResponse(int Status, PaymentResponse[] Payments);
     private sealed record PaymentResponse(decimal Amount, DateTimeOffset PaidAt);
