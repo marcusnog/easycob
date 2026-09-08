@@ -4,10 +4,12 @@ import SubmitButton from "@/components/submit-button";
 import Link from "next/link";
 import ContactForm from "./contact-form";
 import { setConsent } from "./contact-actions";
+import ImportForm from "./import-form";
 
 type Customer = { id: string; name: string; document?: string; createdAt: string };
 type Contact = { id: string; phone?: string; email?: string; whatsAppOptIn: boolean; consentAt?: string; optOutAt?: string };
 type CustomerDetail = Customer & { contacts: Contact[] };
+type CurrentUser = { role: number };
 
 async function createCustomer(formData: FormData) {
   "use server";
@@ -19,9 +21,10 @@ async function createCustomer(formData: FormData) {
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ customer?: string; search?: string }> }) {
   const params = await searchParams;
   let customers: Customer[] = [];
+  let currentUser: CurrentUser | null = null;
   let failed = false;
   const query = params.search?.trim();
-  try { customers = await api<Customer[]>(`/customers${query ? `?search=${encodeURIComponent(query)}` : ""}`); } catch { failed = true; }
+  try { [customers, currentUser] = await Promise.all([api<Customer[]>(`/customers${query ? `?search=${encodeURIComponent(query)}` : ""}`), api<CurrentUser>("/tenant/me")]); } catch { failed = true; }
   let selected: CustomerDetail | null = null;
   if (params.customer && /^[\da-f-]{36}$/i.test(params.customer)) {
     try { selected = await api<CustomerDetail>(`/customers/${params.customer}`); } catch { /* Exibe a falha abaixo. */ }
@@ -36,6 +39,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <p className="muted">Cadastre e consulte seus clientes para emitir cobranças.</p>
         </div>
       </div>
+      {currentUser && currentUser.role <= 2 && <div style={{ marginBottom: "1.5rem" }}><ImportForm /></div>}
       {params.customer && !selected && <p className="error" role="alert">Não foi possível carregar os contatos. Selecione o cliente novamente.</p>}
       {selected && <section className="card" style={{ marginBottom: "1.5rem" }} aria-labelledby="contact-title">
         <div className="table-card-header">
@@ -90,7 +94,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             <table>
               <thead><tr><th>Nome</th><th>Documento</th><th>Cadastro</th><th>Ações</th></tr></thead>
               <tbody>{customers.map(customer =>
-                  <tr key={customer.id}><td data-label="Nome">{customer.name}</td><td data-label="Documento">{customer.document || "—"}</td><td data-label="Cadastro">{new Date(customer.createdAt).toLocaleDateString("pt-BR")}</td><td data-label="Ações"><Link className="btn btn-secondary" href={`/customers?customer=${customer.id}`}>Ver contatos</Link></td></tr>
+                  <tr key={customer.id}><td data-label="Nome">{customer.name}</td><td data-label="Documento">{customer.document || "—"}</td><td data-label="Cadastro">{new Date(customer.createdAt).toLocaleDateString("pt-BR")}</td><td data-label="Ações"><div className="actions"><Link className="btn btn-secondary" href={`/customers?customer=${customer.id}`}>Ver contatos</Link>{currentUser && currentUser.role <= 1 && <a className="btn btn-secondary" href={`/api/customers/${customer.id}/export`}>Exportar</a>}</div></td></tr>
               )}</tbody>
             </table>
           )}
