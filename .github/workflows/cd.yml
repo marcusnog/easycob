@@ -28,6 +28,8 @@ jobs:
         with:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
+          pull: true
+          no-cache-filters: ${{ matrix.app == 'web' && 'runtime' || '' }}
           push: true
           tags: |
             ${{ secrets.ECR_REGISTRY }}/easycob-homol-${{ matrix.app }}:${{ github.sha }}

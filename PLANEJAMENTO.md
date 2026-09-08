@@ -1,6 +1,7 @@
 # EasyCob — planejamento de arquitetura e desenvolvimento
 
-Status: proposta para aprovação  
+Status: em desenvolvimento; acompanhamento abaixo, decisões de produto/produção ainda pendentes quando não registradas nos ADRs
+
 Stack-base: .NET 10, PostgreSQL, Next.js/React, AWS, WhatsApp Cloud API
 
 ## 1. Decisão arquitetural
@@ -193,6 +194,14 @@ Monorepo, contratos OpenAPI gerados pela API e cliente TypeScript gerado no buil
 - Separar Messaging, Multi-Zones, Redis ou infraestrutura HA apenas quando os gatilhos ocorrerem.
 
 Estimativa inicial: 9–13 semanas para piloto com uma equipe pequena e experiente (2 backend, 1 frontend, 1 QA/produto compartilhado). Refinar após a Fase 0.
+
+### Acompanhamento — 08/09/2026
+
+- Fases 1–2: há API, worker, frontend, migrations, CI e infraestrutura de homologação versionados. Isso não representa aceite integral nem comprova implantação; os requisitos continuam sujeitos à matriz de verificação de `docs/specs/README.md`.
+- Entrega atual (Fase 2, calendário de cobrança; Fase 3, regressão): atualização de vencidos pelo dia civil de cada tenant, com escopo e filtro próprios. Teste `OverdueUpdaterTests` cobre São Paulo versus UTC, estados preservados, cobrança futura e reexecução idempotente.
+- Próxima entrega: cobertura do consumo SQS/inbox e do adaptador WhatsApp com respostas sanitizadas, incluindo duplicação, falha transitória e entrega ambígua (MSG/DAT).
+- Pendências de aceite do piloto: integração real PostgreSQL/RLS/SQS, E2E das três jornadas, carga, revisão de acessibilidade, runbooks e restauração comprovada. Não marcar esses itens como concluídos apenas com testes InMemory ou arquivos de infraestrutura.
+- Decisões operacionais da Fase 0 (volumes, SLO, RPO/RTO e critérios do piloto) precisam de registro antes do aceite de produção. A Fase 4 permanece condicionada às métricas e aprovações previstas.
 
 ## 14. Critérios de aceite do MVP
 

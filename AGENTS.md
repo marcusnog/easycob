@@ -2,7 +2,14 @@
 
 EasyCob: modular monolith — ASP.NET Core 10 (api + worker), Next.js 16 (web), PostgreSQL, SQS, WhatsApp Cloud API. Functional/technical spec: `docs/specs/README.md`; architecture decisions: `docs/adr/`. Docs and code comments are in pt-BR; match that.
 
-## Layout
+## Continuidade do desenvolvimento
+
+- Leia `PLANEJAMENTO.md` (fases e acompanhamento), `docs/specs/README.md` (requisitos de aceite) e os ADRs relacionados antes de escolher a próxima entrega.
+- Confira a implementação e os testes antes de marcar uma entrega como concluída. Atualize o acompanhamento no planejamento com o que foi validado e as pendências reais; infraestrutura versionada não comprova deploy, restore ou piloto executado.
+- Priorize lacunas do MVP e endurecimento da Fase 3. Evoluções da Fase 4 dependem dos gatilhos documentados; reutilize código e dependências existentes.
+- Datas civis de negócio devem respeitar `Tenant.TimeZone`. O `OverdueUpdater` processa cada tenant em escopo próprio; seu teste de regressão cobre fusos distintos e repetição da execução.
+
+## Estrutura
 
 - `apps/api/EasyCob.Core/` — business modules under `Modules/{Tenancy,Customers,Billing,Messaging,Finance,Audit}` (one `Entities.cs` per module plus static helpers like `InstallmentSchedule`), `Data/` (DbContext, EF migrations), `Tenancy/Tenancy.cs` (`TenantContext`). Architecture tests enforce that modules do not reference each other.
 - `apps/api/` — minimal-API endpoints in `Endpoints/`, thin over Core; one flat file per module (plus `WhatsAppWebhookEndpoints.cs`).
@@ -45,5 +52,5 @@ npm --prefix apps/web run dev
 ## Conventions
 
 - 4-space C# / 2-space TypeScript/JSON; `PascalCase` C# public members, `camelCase` locals/TS, `kebab-case` route prefixes (`/message-templates`, `/collection-rules`). Endpoints are flat files in `Endpoints/`, one per module.
-- Tests named `Method_Scenario_Result`; money rules, tenant isolation, and webhook signatures/idempotency (incl. inbox dedup) already have coverage — extend it. The worker (outbox→SQS, WhatsApp dispatch) has **no** test coverage. Bug fixes include one regression test.
+- Tests named `Method_Scenario_Result`; money rules, tenant isolation, and webhook signatures/idempotency (incl. inbox dedup) already have coverage — extend it. O worker possui cobertura do `OverdueUpdater`; outbox→SQS, consumo e despacho WhatsApp ainda precisam de cobertura. Bug fixes include one regression test.
 - Conventional Commits, e.g. `feat(billing): add installment schedule`; record consequential architecture changes in `docs/adr/`. PRs note behavior change, testing, migration/rollback impact.

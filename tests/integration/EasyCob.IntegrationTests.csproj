@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\apps\api\EasyCob.Core\EasyCob.Core.csproj" />
     <ProjectReference Include="..\..\apps\api\EasyCob.Api.csproj" />
+    <ProjectReference Include="..\..\apps\worker\EasyCob.Worker.csproj" />
   </ItemGroup>
 
 </Project>
