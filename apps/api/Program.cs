@@ -51,6 +51,23 @@ builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLi
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, _) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            context.HttpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.TotalSeconds).ToString();
+        return ValueTask.CompletedTask;
+    };
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var tenantId = context.User.FindFirstValue("tenant_id");
+        var key = tenantId is null ? $"ip:{context.Connection.RemoteIpAddress}" : $"tenant:{tenantId}";
+        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = tenantId is null ? 300 : 600,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
     options.AddPolicy("webhooks", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -59,10 +76,19 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment()) app.UseExceptionHandler();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+    context.Response.Headers.Append("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    await next();
+});
 app.UseSwagger();
 if (app.Environment.IsDevelopment()) app.UseSwaggerUI();
 app.UseRouting();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     var started = Stopwatch.GetTimestamp();
@@ -117,13 +143,12 @@ app.Use(async (context, next) =>
         await transaction.CommitAsync(context.RequestAborted);
 });
 app.UseAuthorization();
-app.UseRateLimiter();
 
-app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).DisableRateLimiting();
 app.MapGet("/health/ready", async (EasyCobDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct)
         ? Results.Ok(new { status = "ready" })
-        : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
+        : Results.StatusCode(StatusCodes.Status503ServiceUnavailable)).DisableRateLimiting();
 app.MapCustomers();
 app.MapBilling();
 app.MapMessaging();

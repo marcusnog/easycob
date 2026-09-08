@@ -30,6 +30,7 @@ services:
     image: ${ECR_REGISTRY}/easycob-homol-api:${IMAGE_TAG}
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: api
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=easycob;Username=easycob_api;Password=easycob-api-local
       Authentication__Authority: ${Authentication__Authority}
       Authentication__Audience: ${Authentication__Audience}

@@ -34,6 +34,12 @@ jobs:
             ${{ secrets.ECR_REGISTRY }}/easycob-homol-${{ matrix.app }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ secrets.ECR_REGISTRY }}/easycob-homol-${{ matrix.app }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 1
 
   deploy-homol:
     runs-on: ubuntu-latest

@@ -306,6 +306,28 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Api_ResponseIncludesSecurityHeaders()
+    {
+        var response = await factory.CreateClient().GetAsync("/health/live");
+
+        Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+        Assert.Equal("DENY", Assert.Single(response.Headers.GetValues("X-Frame-Options")));
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+    }
+
+    [Fact]
+    public async Task WhatsAppWebhook_ExcessRequests_ReturnsTooManyRequests()
+    {
+        var client = factory.CreateClient();
+        HttpResponseMessage? response = null;
+        for (var attempt = 0; attempt < 125 && response?.StatusCode != HttpStatusCode.TooManyRequests; attempt++)
+            response = await client.GetAsync("/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=invalid&hub.challenge=x");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response!.StatusCode);
+        Assert.True(response.Headers.Contains("Retry-After"));
+    }
+
     private sealed record IdResponse(Guid Id);
     private sealed record CustomerResponse(Guid Id, string Name);
     private sealed record CustomerDetailResponse(ContactResponse[] Contacts);

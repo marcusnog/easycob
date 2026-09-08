@@ -19,7 +19,7 @@ internal static class WhatsAppWebhookEndpoints
             request.Query["hub.mode"] == "subscribe" &&
             FixedEquals(request.Query["hub.verify_token"].ToString(), configuration["WhatsApp:VerifyToken"])
                 ? Results.Text(request.Query["hub.challenge"].ToString())
-                : Results.StatusCode(StatusCodes.Status403Forbidden));
+                : Results.StatusCode(StatusCodes.Status403Forbidden)).RequireRateLimiting("webhooks");
 
         app.MapPost("/webhooks/whatsapp", async (HttpRequest request, EasyCobDbContext db, TenantContext tenant, IConfiguration configuration, CancellationToken ct) =>
         {
