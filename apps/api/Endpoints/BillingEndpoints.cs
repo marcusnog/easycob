@@ -88,7 +88,6 @@ internal static class BillingEndpoints
         {
             var amount = decimal.Round(request.Amount, 2, MidpointRounding.AwayFromZero);
             if (amount <= 0) return Invalid("amount", "Valor deve ser pelo menos 0,01.");
-            if (request.PaidAt > DateTimeOffset.UtcNow.AddMinutes(5)) return Invalid("paidAt", "Data do pagamento não pode estar no futuro.");
             var charge = await db.Charges.SingleOrDefaultAsync(x => x.Id == id, ct);
             if (charge is null) return Results.NotFound();
             if (charge.Status == ChargeStatus.Cancelled) return Results.Conflict(new { error = "Cobrança cancelada." });
@@ -97,7 +96,7 @@ internal static class BillingEndpoints
             var paid = await db.Payments.Where(x => x.ChargeId == id).SumAsync(x => x.Amount, ct);
             if (paid + amount > charge.Amount) return Invalid("amount", "Pagamento excede o saldo da cobrança.");
 
-            var payment = new Payment { ChargeId = id, Amount = amount, PaidAt = request.PaidAt.ToUniversalTime(), ExternalId = EmptyToNull(request.ExternalId) };
+            var payment = new Payment { ChargeId = id, Amount = amount, PaidAt = DateTimeOffset.UtcNow, ExternalId = EmptyToNull(request.ExternalId) };
             db.Payments.Add(payment);
             charge.RecordPayment(paid, amount);
             AddEvent(db, "billing.payment-recorded.v1", new { payment.Id, ChargeId = id, payment.Amount, payment.PaidAt });
@@ -127,4 +126,4 @@ internal static class BillingEndpoints
 }
 
 internal sealed record CreateChargeRequest(Guid CustomerId, string Description, decimal Amount, DateOnly FirstDueDate, int Installments = 1);
-internal sealed record PaymentRequest(decimal Amount, DateTimeOffset PaidAt, string? ExternalId);
+internal sealed record PaymentRequest(decimal Amount, string? ExternalId);

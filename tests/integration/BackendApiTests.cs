@@ -104,13 +104,14 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
             installments = 1
         });
         var chargeId = (await charge.Content.ReadFromJsonAsync<IdResponse>())!.Id;
-        var payment = new { amount = 25m, paidAt = DateTimeOffset.UtcNow, externalId = Guid.NewGuid().ToString("N") };
+        var payment = new { amount = 25m, paidAt = DateTimeOffset.UtcNow.AddYears(-1), externalId = Guid.NewGuid().ToString("N") };
+        var registeredAfter = DateTimeOffset.UtcNow;
 
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync($"/charges/{chargeId}/payments", payment)).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync($"/charges/{chargeId}/payments", payment)).StatusCode);
         var detail = await client.GetFromJsonAsync<ChargeStatusResponse>($"/charges/{chargeId}");
         Assert.Equal(3, detail!.Status);
-        Assert.Single(detail.Payments);
+        Assert.InRange(Assert.Single(detail.Payments).PaidAt, registeredAfter, DateTimeOffset.UtcNow);
     }
 
     [Fact]
@@ -130,10 +131,12 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync(path, new { amount = 30m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
         client.DefaultRequestHeaders.Remove("X-Role");
         client.DefaultRequestHeaders.Add("X-Role", "Finance");
-        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, new { amount = 30m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
+        var registeredAfter = DateTimeOffset.UtcNow;
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, new { amount = 30m })).StatusCode);
         var partial = await client.GetFromJsonAsync<ChargeStatusResponse>($"/charges/{chargeId}");
         Assert.Equal(2, partial!.Status);
         Assert.Equal(30m, Assert.Single(partial.Payments).Amount);
+        Assert.InRange(partial.Payments[0].PaidAt, registeredAfter, DateTimeOffset.UtcNow);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync(path, new { amount = 71m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, new { amount = 70m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
         var settled = await client.GetFromJsonAsync<ChargeStatusResponse>($"/charges/{chargeId}");
@@ -207,7 +210,7 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     private sealed record CustomerResponse(Guid Id, string Name);
     private sealed record ChargeResponse(InstallmentResponse[] Installments);
     private sealed record ChargeStatusResponse(int Status, PaymentResponse[] Payments);
-    private sealed record PaymentResponse(decimal Amount);
+    private sealed record PaymentResponse(decimal Amount, DateTimeOffset PaidAt);
     private sealed record InstallmentResponse(decimal Amount);
     private sealed record TenantResponse(Guid Id, string Name, string TimeZone, string Currency, string? WhatsAppPhoneNumberId);
 }
