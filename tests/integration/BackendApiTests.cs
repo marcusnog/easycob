@@ -114,6 +114,35 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     }
 
     [Fact]
+    public async Task Payment_PartialThenRemaining_UpdatesBalanceAndSettlesCharge()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        client.DefaultRequestHeaders.Add("X-Role", "Finance");
+        var customer = await client.PostAsJsonAsync("/customers", new { name = "Baixa manual", document = Guid.NewGuid().ToString("N") });
+        var customerId = (await customer.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+        var charge = await client.PostAsJsonAsync("/charges", new { customerId, description = "Pagamento parcial", amount = 100m, firstDueDate = "2026-08-10", installments = 1 });
+        var chargeId = (await charge.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+        var path = $"/charges/{chargeId}/payments";
+
+        client.DefaultRequestHeaders.Remove("X-Role");
+        client.DefaultRequestHeaders.Add("X-Role", "Collector");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync(path, new { amount = 30m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
+        client.DefaultRequestHeaders.Remove("X-Role");
+        client.DefaultRequestHeaders.Add("X-Role", "Finance");
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, new { amount = 30m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
+        var partial = await client.GetFromJsonAsync<ChargeStatusResponse>($"/charges/{chargeId}");
+        Assert.Equal(2, partial!.Status);
+        Assert.Equal(30m, Assert.Single(partial.Payments).Amount);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync(path, new { amount = 71m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync(path, new { amount = 70m, paidAt = DateTimeOffset.UtcNow })).StatusCode);
+        var settled = await client.GetFromJsonAsync<ChargeStatusResponse>($"/charges/{chargeId}");
+        Assert.Equal(3, settled!.Status);
+        Assert.Equal(100m, settled.Payments.Sum(x => x.Amount));
+        Assert.Equal(2, settled.Payments.Length);
+    }
+
+    [Fact]
     public async Task WhatsAppWebhook_InvalidSignature_IsUnauthorized()
     {
         using var content = new StringContent("{}", Encoding.UTF8, "application/json");

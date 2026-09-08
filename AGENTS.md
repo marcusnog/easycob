@@ -18,7 +18,7 @@ dotnet build                                     # api, worker, core, tests
 dotnet test                                      # both suites; runs offline, no Docker needed
 dotnet test tests/integration/EasyCob.IntegrationTests.csproj
 dotnet test tests/integration/EasyCob.IntegrationTests.csproj --filter FullyQualifiedName~TenantIsolationTests
-dotnet format                                    # formatter gate
+dotnet format --verify-no-changes --no-restore    # CI gate (.github/workflows/ci.yml); plain `dotnet format` rewrites files
 dotnet tool restore                              # installs dotnet-ef (pinned in dotnet-tools.json)
 dotnet tool run dotnet-ef migrations add <Name> --project apps/api/EasyCob.Core
 npm --prefix apps/web ci
