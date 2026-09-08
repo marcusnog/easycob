@@ -188,6 +188,64 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     }
 
     [Fact]
+    public async Task CollectionRule_AdminCreatesAndDeactivatesRule()
+    {
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        admin.DefaultRequestHeaders.Add("X-Role", "Admin");
+        var name = $"Template {Guid.NewGuid():N}";
+        var template = await admin.PostAsJsonAsync("/message-templates", new { name, metaTemplateId = "lembrete_teste", language = "pt_BR" });
+        Assert.Equal(HttpStatusCode.Created, template.StatusCode);
+        var templateId = (await template.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+        var rule = await admin.PostAsJsonAsync("/collection-rules", new { name = "Três dias antes", messageTemplateId = templateId, daysOffset = -3 });
+        Assert.Equal(HttpStatusCode.Created, rule.StatusCode);
+        var ruleId = (await rule.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync($"/collection-rules/{ruleId}/active", new { active = false })).StatusCode);
+        var rules = (await admin.GetFromJsonAsync<RuleResponse[]>("/collection-rules"))!;
+        Assert.False(Assert.Single(rules, x => x.Id == ruleId).Active);
+
+        var viewer = factory.CreateClient();
+        viewer.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        viewer.DefaultRequestHeaders.Add("X-Role", "Viewer");
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/message-templates", new { name, metaTemplateId = "x", language = "pt_BR" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task MessageResolve_AmbiguousDelivery_RequiresExternalIdAndPersistsSentState()
+    {
+        Guid messageId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = EasyCobApiFactory.FirstTenant;
+            var db = scope.ServiceProvider.GetRequiredService<EasyCobDbContext>();
+            var message = new EasyCob.Core.Modules.Messaging.Message
+            {
+                ConversationId = Guid.NewGuid(),
+                MessageTemplateId = Guid.NewGuid(),
+                Recipient = "11999998888",
+                ScheduledAt = DateTimeOffset.UtcNow,
+                Status = EasyCob.Core.Modules.Messaging.MessageStatus.Sending
+            };
+            db.Messages.Add(message);
+            await db.SaveChangesAsync();
+            messageId = message.Id;
+        }
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Add("X-Tenant-Id", EasyCobApiFactory.FirstTenant.ToString());
+        admin.DefaultRequestHeaders.Add("X-Role", "Admin");
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/messages/{messageId}/resolve", new { sent = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsJsonAsync($"/messages/{messageId}/resolve", new { sent = true, externalId = "wamid.reconciled" })).StatusCode);
+        using var verificationScope = factory.Services.CreateScope();
+        verificationScope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = EasyCobApiFactory.FirstTenant;
+        var saved = await verificationScope.ServiceProvider.GetRequiredService<EasyCobDbContext>().Messages.SingleAsync(x => x.Id == messageId);
+        Assert.Equal(EasyCob.Core.Modules.Messaging.MessageStatus.Sent, saved.Status);
+        Assert.Equal("wamid.reconciled", saved.ExternalId);
+        Assert.NotNull(saved.SentAt);
+    }
+
+    [Fact]
     public async Task WhatsAppWebhook_InvalidSignature_IsUnauthorized()
     {
         using var content = new StringContent("{}", Encoding.UTF8, "application/json");
@@ -253,6 +311,7 @@ public sealed class BackendApiTests : IClassFixture<EasyCobApiFactory>
     private sealed record CustomerDetailResponse(ContactResponse[] Contacts);
     private sealed record ContactResponse(string? Phone, bool WhatsAppOptIn, DateTimeOffset? ConsentAt, DateTimeOffset? OptOutAt);
     private sealed record AuditResponse(DateTimeOffset OccurredAt);
+    private sealed record RuleResponse(Guid Id, bool Active);
     private sealed record ChargeResponse(InstallmentResponse[] Installments);
     private sealed record ChargeStatusResponse(int Status, PaymentResponse[] Payments);
     private sealed record PaymentResponse(decimal Amount, DateTimeOffset PaidAt);

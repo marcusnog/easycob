@@ -136,6 +136,7 @@ input::placeholder { color: var(--faint); }
 .search-form { display: flex; align-items: end; gap: 0.6rem; margin-bottom: 1rem; }
 .search-form label { flex: 1; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.compact-form { min-width: min(320px, 75vw); }
 
 /* ===== Shell / sidebar layout ===== */
 .shell { min-height: 100vh; }

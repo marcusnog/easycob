@@ -15,12 +15,12 @@ const actionLabels: Record<string, string> = {
   "customer.updated": "Cliente atualizado",
   "customers.imported": "Clientes importados",
   "message.delivery-reconciled": "Entrega reconciliada",
+  "message-template.created": "Template criado",
   "message.retry-requested": "Reenvio solicitado",
   "payment.recorded": "Pagamento registrado",
-  "rule.activated": "Regra ativada",
-  "rule.created": "Regra criada",
-  "rule.deactivated": "Regra desativada",
-  "template.created": "Template criado",
+  "collection-rule.activated": "Regra ativada",
+  "collection-rule.created": "Regra criada",
+  "collection-rule.deactivated": "Regra desativada",
   "tenant.settings-updated": "Configurações alteradas",
 };
 
